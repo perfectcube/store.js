@@ -9,7 +9,7 @@ module.exports = {
 
 function run(store, callback) {
 	tests.outputError = function(msg) {
-		callback(err)
+		callback(msg)
 	}
 	tests.output = function(msg) {
 		console.log(msg)

@@ -10,9 +10,11 @@ module.exports = (function() {
 		storage
 
 	store.disabled = false
-	store.version = '1.3.20'
+	store.version = '1.4.0'
 	store.set = function(key, value) {}
+	store.setRawString = function(key, value) {}
 	store.get = function(key, defaultVal) {}
+	store.getRawString = function(key, defaultVal) {}
 	store.has = function(key) { return store.get(key) !== undefined }
 	store.remove = function(key) {}
 	store.clear = function() {}
@@ -36,6 +38,7 @@ module.exports = (function() {
 		return ret
 	}
 	store.forEach = function() {}
+	store.forEachRawString = function() {}
 	store.serialize = function(value) {
 		return JSON.stringify(value)
 	}
@@ -60,8 +63,17 @@ module.exports = (function() {
 			storage.setItem(key, store.serialize(val))
 			return val
 		}
+		store.setRawString = function(key, val) {
+			if (val === undefined) { return store.remove(key) }
+			storage.setItem(key, val)
+			return val
+		}
 		store.get = function(key, defaultVal) {
 			var val = store.deserialize(storage.getItem(key))
+			return (val === undefined ? defaultVal : val)
+		}
+		store.getRawString = function(key, defaultVal) {
+			var val = storage.getItem(key)
 			return (val === undefined ? defaultVal : val)
 		}
 		store.remove = function(key) { storage.removeItem(key) }
@@ -70,6 +82,12 @@ module.exports = (function() {
 			for (var i=0; i<storage.length; i++) {
 				var key = storage.key(i)
 				callback(key, store.get(key))
+			}
+		}
+		store.forEachRawString = function(callback) {
+			for (var i=0; i<storage.length; i++) {
+				var key = storage.key(i)
+				callback(key, store.getRawString(key))
 			}
 		}
 	} else if (doc && doc.documentElement.addBehavior) {
@@ -127,9 +145,21 @@ module.exports = (function() {
 			storage.save(localStorageName)
 			return val
 		})
+		store.setRawString = withIEStorage(function(storage, key, val) {
+			key = ieKeyFix(key)
+			if (val === undefined) { return store.remove(key) }
+			storage.setAttribute(key, val)
+			storage.save(localStorageName)
+			return val
+		})
 		store.get = withIEStorage(function(storage, key, defaultVal) {
 			key = ieKeyFix(key)
 			var val = store.deserialize(storage.getAttribute(key))
+			return (val === undefined ? defaultVal : val)
+		})
+		store.getRawString = withIEStorage(function(storage, key, defaultVal) {
+			key = ieKeyFix(key)
+			var val = storage.getAttribute(key)
 			return (val === undefined ? defaultVal : val)
 		})
 		store.remove = withIEStorage(function(storage, key) {
@@ -151,12 +181,34 @@ module.exports = (function() {
 				callback(attr.name, store.deserialize(storage.getAttribute(attr.name)))
 			}
 		})
+		store.forEachRawString = withIEStorage(function(storage, callback) {
+			var attributes = storage.XMLDocument.documentElement.attributes
+			for (var i=0, attr; attr=attributes[i]; ++i) {
+				callback(attr.name, storage.getAttribute(attr.name))
+			}
+		})
 	}
 
 	try {
-		var testKey = '__storejs__'
-		store.set(testKey, testKey)
-		if (store.get(testKey) != testKey) { store.disabled = true }
+		var testKey = '__storejs__',
+			keysDetected = false
+
+		try {
+			store.set(testKey, testKey)
+		} catch(e2) {}
+
+		if (store.get(testKey) != testKey) {
+			// The store might be full, if that's the case then the store.set above can fail legitimately
+			// Before declaring defeat, and as a test for a full storage, try to detect if there are any existing keys
+			store.forEachRawString(function(name, value) {
+				keysDetected = true
+			})
+
+			// If existing keys were not detected in the store, then disable the store
+			if (!keysDetected) {
+				store.disabled = true
+			}
+		}
 		store.remove(testKey)
 	} catch(e) {
 		store.disabled = true

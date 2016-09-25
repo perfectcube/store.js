@@ -117,6 +117,24 @@ function runSecondPass(store) {
 
 	var all = store.getAll()
 	assert(countProperties(all) == 0, "getAll returns 0 properties after store.clear() has been called")
+
+	// test the raw string functions
+	store.clear()
+
+	var fancyString = String.fromCharCode(0xbabe, 0xada1 | 0)
+	assert(fancyString.charCodeAt(0) === 0xbabe | 0, "fancy string properly encoded a 16-bit value")
+	assert(fancyString.charCodeAt(1) === 0xada1 | 0, "fancy string properly encoded a 16-bit value")
+	store.setRawString("fancyPants", fancyString)
+
+	var retrievedFancy = store.getRawString("fancyPants")
+	assert(retrievedFancy.length === 2, "got valid first character from store")
+	assert(retrievedFancy.charCodeAt(0) === 0xbabe | 0, "got valid first character from store")
+	assert(retrievedFancy.charCodeAt(1) === 0xada1 | 0, "got valid second character from store")
+
+	store.forEachRawString(function(key, value) {
+		assert(key === "fancyPants", "got our one and only key")
+		assert(value === fancyString, "got our one and only string")
+	})
 }
 
 function countProperties(obj) {

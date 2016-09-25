@@ -30,6 +30,17 @@ store.getAll().user.name == 'marcus'
 store.forEach(function(key, val) {
 	console.log(key, '==', val)
 })
+
+// Raw string version of get (does NOT JSON.parse() the value coming from storage)
+store.getRawString('username')
+
+// Raw string version of set (does NOT JSON.stringify() the value before putting to storage)
+store.setRawString('username', 'marcus☠dave')
+
+// Raw string version of forEach (does NOT JSON.parse() the values coming from storage)
+store.forEachRawString(function(key, val) {
+	console.log(key, '==', val)
+})
 ```
 
 
@@ -37,7 +48,7 @@ How does it work?
 ------------------
 store.js uses localStorage when available, and falls back on the userData behavior in IE6 and IE7. No flash to slow down your page load. No cookies to fatten your network requests.
 
-store.js depends on JSON for serialization to disk.
+store.js depends on JSON for serialization to disk (unless the `*RawString` functions are used).
 
 
 Installation
